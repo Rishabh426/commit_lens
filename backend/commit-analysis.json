@@ -1,0 +1,12 @@
+{
+  "commitSHA": "763800e51334bd49aa10218f6f5c922dee82ce52",
+  "commitMessage": "Create myfile.cpp",
+  "timestamp": "2025-03-11T05:36:17Z",
+  "files": [
+    {
+      "filePath": "myfile.cpp",
+      "content": "#include <bits/stdc++.h>\nusing namespace std;\n\n//////////////////////////// basic macros ///////////////////////////////////////////////////////////////\n#define vi vector<int>\n#define all(a) (a).begin(), (a).end() // for sorting use sort(all(myVector));\n#define nl \"\\n\"\n\nvoid input(vi& arr) {\n    for (auto &c : arr) cin >> c;\n}\n\nvoid solve() {\n    int n, k;\n    cin >> n >> k;\n\n    vi arr(n);\n    input(arr);\n    sort(all(arr)); \n\n    int i=0, j=n-1, ans = 0;\n    while(i<=j) {\n        if(arr[i]+arr[j] <= k) i++;\n        ++ans, --j;\n    }\n\n    cout << ans << nl;\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(0);\n    solve();\n    return 0;\n}\n",
+      "status": "added"
+    }
+  ]
+}
