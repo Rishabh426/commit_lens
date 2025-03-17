@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres:Rishabh1234@db.ejjnljgrvekvchokahif.supabase.co:5432/postgres"
+}
+
+model Commit {
+  id        String @id @default(uuid())
+  sha       String @unique
+  createdAt DateTime @default(now())
+  files     File[]
+}
+
+model File {
+  id        String  @id @default(uuid())
+  commitSha String
+  fileName  String
+  content   String
+  commit    Commit  @relation(fields: [commitSha], references: [sha], onDelete: Cascade)
+}

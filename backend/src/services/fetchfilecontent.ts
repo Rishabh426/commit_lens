@@ -1,5 +1,6 @@
 import axios from "axios";
 import dotenv from "dotenv";
+import prisma from "../db/prismaClient";
 
 dotenv.config();
 
@@ -16,7 +17,16 @@ export async function fetchFileContent(filePath: string, commitSHA: string) {
         });
         const fileContent = Buffer.from(response.data.content, "base64").toString("utf-8");
 
-        return { filePath, content: fileContent };
+        await prisma.file.create({
+            data: {
+                commitSha: commitSHA,
+                fileName: filePath,
+                content: fileContent,
+            },
+        });
+
+        console.log(`Stored ${filePath} (Commit: ${commitSHA})`);
+        return { fileName : filePath, content: fileContent };
     } catch (error: any) {
         console.error(`ERROR FETCHING FILE ${filePath}:`, error.response?.data || error.message);
         return { filePath, content: null };

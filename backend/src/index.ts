@@ -1,6 +1,7 @@
 import axios from "axios";
 import dotenv from "dotenv";
 import { fetchFileContent } from "./services/fetchfilecontent";
+import { storeCommit } from "./services/storeCode";
 
 dotenv.config();
 
@@ -40,14 +41,9 @@ async function getLatestCommitChanges() {
             filesChanged.map((file: any) => fetchFileContent(file.filename, commitSHA))
         );
 
-        fileContents.forEach(({ filePath, content }) => {
-            console.log(`\n📄 File: ${filePath}`);
-            console.log("------------------------------------------------");
-            console.log(content);
-            console.log("------------------------------------------------");
-        });
-
-        return fileContents;
+        await storeCommit(commitSHA, fileContents);
+        console.log("All commit files stored in neon DB");
+        
     } catch (error: any) {
         console.error("Error fetching commit changes:", error.response?.data || error.message);
     }
