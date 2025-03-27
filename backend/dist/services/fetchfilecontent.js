@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchFileContent = fetchFileContent;
 const axios_1 = __importDefault(require("axios"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const prismaClient_1 = __importDefault(require("../db/prismaClient"));
 dotenv_1.default.config();
 const OWNER = "Rishabh426";
 const REPO = "test_repo";
@@ -28,7 +29,15 @@ function fetchFileContent(filePath, commitSHA) {
                 headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
             });
             const fileContent = Buffer.from(response.data.content, "base64").toString("utf-8");
-            return { filePath, content: fileContent };
+            yield prismaClient_1.default.file.create({
+                data: {
+                    commitSha: commitSHA,
+                    fileName: filePath,
+                    content: fileContent,
+                },
+            });
+            console.log(`Stored ${filePath} (Commit: ${commitSHA})`);
+            return { fileName: filePath, content: fileContent };
         }
         catch (error) {
             console.error(`ERROR FETCHING FILE ${filePath}:`, ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
