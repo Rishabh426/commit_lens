@@ -96,7 +96,7 @@ function App() {
         </div>
       </div>
       <button onClick={toggleDarkMode} className="theme-toggle">
-        {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+        {isDarkMode ? '☀️ Light Mode' : 'Dark Mode'}
       </button>
     </div>
   )
