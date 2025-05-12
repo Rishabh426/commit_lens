@@ -1,8 +1,14 @@
+"use client"
 import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useState } from "react"
 import Image from "next/image"
 
 export default function Hero() {
+    const [isEditorOpen, setIsEditorOpen] = useState<boolean>(false)
+
+    const openEditor = () => setIsEditorOpen(true)
+    const closeEditor = () => setIsEditorOpen(false)
   return (
     <section className="py-12 md:py-24 bg-gradient-to-b from-white to-gray-50">
       <div className="container px-4 md:px-6 mx-auto">
@@ -30,7 +36,7 @@ export default function Hero() {
             />
           </div>
         </div>
-      </div>
+      </div> 
     </section>
   )
 }
