@@ -1,28 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Hero from "@/components/hero"
 import Features from "@/components/features"
 import Documentation from "@/components/documentation"
 import CodeExamples from "@/components/code_example"
 import Footer from "@/components/footer"
 // import { ThemeToggle } from "@/components/theme-toggle"
-import { CodeEditorModal } from "@/components/codeEditor"
 
 export default function Home() {
-  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const router = useRouter()
 
-  const openEditor = () => {
-    setIsEditorOpen(true)
-  }
-
-  const closeEditor = () => {
-    setIsEditorOpen(false)
+  const navigateToCodeEditor = () => {
+    router.push("/landing/codeeditor")
   }
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
-      {/* Navbar - keeping intact as requested */}
       <div className="mb-12">
         <nav className="shadow-xl h-16 bg-white dark:bg-gray-900">
           <div className="flex justify-between items-center h-full px-6 max-w-7xl mx-auto">
@@ -53,9 +47,10 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* <ThemeToggle /> */}
               <button
                 className="px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition"
-                onClick={openEditor}
+                onClick={navigateToCodeEditor}
               >
                 Get Started
               </button>
@@ -64,13 +59,11 @@ export default function Home() {
         </nav>
       </div>
 
-      <Hero onOpenEditor={openEditor} />
+      <Hero onOpenEditor={navigateToCodeEditor} />
       <Features />
       <Documentation />
       <CodeExamples />
       <Footer />
-
-      <CodeEditorModal isOpen={isEditorOpen} onClose={closeEditor} />
     </main>
   )
 }

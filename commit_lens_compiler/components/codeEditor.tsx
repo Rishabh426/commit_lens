@@ -9,7 +9,7 @@ import dynamic from "next/dynamic"
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
-  loading: () => <div className="h-[500px] w-full bg-gray-800 animate-pulse rounded-md"></div>,
+  loading: () => <div className="h-full w-full bg-gray-800 animate-pulse rounded-md"></div>,
 })
 
 type Language = "javascript" | "cpp" | "c"
@@ -142,6 +142,7 @@ export function CodeEditorModal({ isOpen, onClose }: CodeEditorModalProps) {
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 flex-1 overflow-hidden">
+          {/* Editor Panel */}
           <div className="h-full border-r border-gray-700 overflow-hidden">
             <MonacoEditor
               height="100%"
@@ -160,6 +161,7 @@ export function CodeEditorModal({ isOpen, onClose }: CodeEditorModalProps) {
             />
           </div>
 
+          {/* Output Panel */}
           <div className="flex flex-col h-full bg-gray-800">
             <div className="px-4 py-3 border-b border-gray-700 font-medium">Output</div>
             <div className="p-4 font-mono text-sm h-full overflow-auto">

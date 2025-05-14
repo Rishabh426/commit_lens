@@ -30,13 +30,13 @@ export default function Hero({ onOpenEditor }: HeroProps) {
             </div>
           </div>
           <div className="relative h-[400px] lg:h-[500px] rounded-lg overflow-hidden shadow-2xl">
-            <Image
+            {/* <Image
               src="/placeholder.svg?height=500&width=600"
               alt="CommitLens IDE interface"
               fill
               className="object-cover"
               priority
-            />
+            /> */}
           </div>
         </div>
       </div>
