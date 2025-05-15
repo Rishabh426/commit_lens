@@ -4,15 +4,17 @@ import { useState, useEffect } from "react"
 import { ArrowLeft, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import dynamic from "next/dynamic"
+import type { Language } from "@/types/code"
+import { analyzeCode } from "@/lib/syntax-analyze"
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => <div className="h-[calc(100vh-64px)] w-full bg-gray-800 animate-pulse rounded-md"></div>,
 })
-
-type Language = "javascript" | "cpp" | "c"
 
 const DEFAULT_CODE = {
   javascript: `// JavaScript Example
@@ -24,6 +26,17 @@ function greet(name) {
 console.log(greet("World"));
 
 // You can write any JavaScript code here
+// Click the Run button to execute it
+`,
+  typescript: `// TypeScript Example
+function greet(name: string): string {
+  return \`Hello, \${name}!\`;
+}
+
+// Test the function
+console.log(greet("World"));
+
+// You can write any TypeScript code here
 // Click the Run button to execute it
 `,
   cpp: `// C++ Example
@@ -64,18 +77,14 @@ int main() {
 }`,
 }
 
-const OUTPUT_EXAMPLES = {
-  javascript: "Hello, World!",
-  cpp: "Hello, World!",
-  c: "Hello, World!",
-}
-
 export default function CodeEditorPage() {
+  const router = useRouter()
   const [language, setLanguage] = useState<Language>("javascript")
   const [code, setCode] = useState<string>(DEFAULT_CODE.javascript)
-  const [output, setOutput] = useState<string>("")
-  const [isRunning, setIsRunning] = useState(false)
+  const [title, setTitle] = useState<string>("Untitled Snippet")
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
+  // Update code when language changes
   useEffect(() => {
     setCode(DEFAULT_CODE[language])
   }, [language])
@@ -90,12 +99,19 @@ export default function CodeEditorPage() {
     }
   }
 
-  const runCode = () => {
-    setIsRunning(true)
-    setTimeout(() => {
-      setOutput(OUTPUT_EXAMPLES[language])
-      setIsRunning(false)
-    }, 1000)
+  const analyzeAndNavigate = async () => {
+    setIsAnalyzing(true)
+    try {
+      const analysisResult = await analyzeCode(code, language, title)
+
+      sessionStorage.setItem("codeAnalysisResult", JSON.stringify(analysisResult))
+
+      router.push("/landing/report")
+    } catch (error) {
+      console.error("Error analyzing code:", error)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   return (
@@ -113,37 +129,48 @@ export default function CodeEditorPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-[200px] bg-gray-800 border-gray-700 text-white"
+            placeholder="Snippet Title"
+          />
           <Select value={language} onValueChange={handleLanguageChange}>
             <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
               <SelectValue placeholder="Select Language" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700 text-white">
               <SelectItem value="javascript">JavaScript</SelectItem>
+              <SelectItem value="typescript">TypeScript</SelectItem>
               <SelectItem value="cpp">C++</SelectItem>
               <SelectItem value="c">C</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={runCode} disabled={isRunning} className="bg-blue-700 hover:bg-blue-800 text-white">
-            {isRunning ? (
+          <Button
+            onClick={analyzeAndNavigate}
+            disabled={isAnalyzing}
+            className="bg-blue-700 hover:bg-blue-800 text-white"
+          >
+            {isAnalyzing ? (
               <>
                 <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Running...
+                Analyzing...
               </>
             ) : (
               <>
                 <Play className="h-4 w-4 mr-2" />
-                Run
+                Run Analysis
               </>
             )}
           </Button>
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
-        <div className="h-full border-r border-gray-700 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-hidden">
           <MonacoEditor
             height="100%"
-            language={language === "javascript" ? "javascript" : language === "cpp" ? "cpp" : "c"}
+            language={language}
             theme="vs-dark"
             value={code}
             onChange={handleEditorChange}
@@ -156,16 +183,6 @@ export default function CodeEditorPage() {
               wordWrap: "on",
             }}
           />
-        </div>
-        <div className="flex flex-col h-full bg-gray-800">
-          <div className="px-4 py-3 border-b border-gray-700 font-medium">Output</div>
-          <div className="p-4 font-mono text-sm h-full overflow-auto">
-            {output ? (
-              <pre className="text-white">{output}</pre>
-            ) : (
-              <div className="text-gray-400">Run your code to see the output here.</div>
-            )}
-          </div>
         </div>
       </div>
     </div>
