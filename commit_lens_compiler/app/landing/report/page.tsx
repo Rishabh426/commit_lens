@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Check, X, AlertTriangle, Info } from "lucide-react"
+import { ArrowLeft, Check, X, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -52,7 +52,6 @@ export default function AnalysisReportPage() {
 
   const errorCount = syntaxErrors.filter((e) => e.severity === "error").length
   const warningCount = syntaxErrors.filter((e) => e.severity === "warning").length
-  const infoCount = syntaxErrors.filter((e) => e.severity === "info").length
 
   return (
     <div className="min-h-screen bg-gray-900 text-white pb-16">
@@ -99,7 +98,7 @@ export default function AnalysisReportPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400">Errors</p>
@@ -114,18 +113,10 @@ export default function AnalysisReportPage() {
                 </div>
                 <AlertTriangle className="h-8 w-8 text-yellow-500" />
               </div>
-              <div className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Info</p>
-                  <p className="text-2xl font-bold text-white">{infoCount}</p>
-                </div>
-                <Info className="h-8 w-8 text-blue-500" />
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabs for Code, Errors, and AST */}
         <Tabs defaultValue="errors" className="w-full">
           <TabsList className="bg-gray-800 border-gray-700">
             <TabsTrigger value="errors">Syntax Errors</TabsTrigger>
@@ -151,10 +142,8 @@ export default function AnalysisReportPage() {
                         <div className="flex items-center gap-2 mb-2">
                           {error.severity === "error" ? (
                             <Badge className="bg-red-600">Error</Badge>
-                          ) : error.severity === "warning" ? (
-                            <Badge className="bg-yellow-600">Warning</Badge>
                           ) : (
-                            <Badge className="bg-blue-600">Info</Badge>
+                            <Badge className="bg-yellow-600">Warning</Badge>
                           )}
                           <span className="text-gray-300">
                             Line {error.line}, Column {error.column}
