@@ -28,9 +28,11 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
   let isValid = false
 
   try {
+    // First try with Esprima for basic syntax parsing
     try {
       ast = esprima.parseScript(code, { loc: true, tolerant: true })
 
+      // Check for errors from Esprima
       if (ast.errors && ast.errors.length > 0) {
         ast.errors.forEach((error: any) => {
           syntaxErrors.push({
@@ -42,6 +44,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
         })
       }
     } catch (esprimaError: any) {
+      // Handle parsing errors from Esprima
       syntaxErrors.push({
         line: esprimaError.lineNumber || 1,
         column: esprimaError.column || 1,
@@ -50,6 +53,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       })
     }
 
+    // Try to use Acorn as a fallback for more detailed parsing
     try {
       acorn.parse(code, {
         ecmaVersion: 2020,
@@ -57,6 +61,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
         locations: true,
       })
     } catch (acornError: any) {
+      // Only add if we don't already have a similar error
       const errorMessage = acornError.message || "Syntax error"
       if (!syntaxErrors.some((e) => e.message.includes(errorMessage.substring(0, 20)))) {
         syntaxErrors.push({
@@ -68,6 +73,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       }
     }
 
+    // Manual checks for common JavaScript errors and typos
     const jsKeywords = [
       { word: "function", typos: ["functon", "funtion", "funciton", "functoin"] },
       { word: "return", typos: ["retrn", "retrun", "reutrn", "rteurn"] },
@@ -104,6 +110,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       })
     })
 
+    // Check for unbalanced brackets and parentheses
     const brackets = [
       { open: "(", close: ")", name: "parenthesis" },
       { open: "{", close: "}", name: "curly brace" },
@@ -121,6 +128,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
           positions.push(i)
         } else if (char === close) {
           if (stack.length === 0 || stack[stack.length - 1] !== open) {
+            // Unmatched closing bracket
             const line = code.substring(0, i).split("\n").length
             const column = i - code.lastIndexOf("\n", i - 1)
             syntaxErrors.push({
@@ -136,6 +144,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
         }
       }
 
+      // Check for unclosed brackets
       if (stack.length > 0) {
         for (let i = 0; i < stack.length; i++) {
           const pos = positions[i]
@@ -151,6 +160,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       }
     })
 
+    // Check for missing semicolons at the end of statements
     const statementEndings = [
       /\b(var|let|const)\s+\w+\s*=\s*[^;{}\n]+$/,
       /\breturn\s+[^;{}\n]+$/,
@@ -175,19 +185,25 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       }
     }
 
+    // Additional JavaScript-specific checks
+
+    // Check for undefined variables (simple check)
     const definedVars = new Set<string>()
     const varDeclarationRegex = /\b(var|let|const|function)\s+(\w+)/g
     const functionParamRegex = /\bfunction\s+\w*\s*$$([^)]*)$$/g
 
+    // First pass: collect defined variables
     let match: RegExpExecArray | null
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
 
+      // Get variable declarations
       varDeclarationRegex.lastIndex = 0
       while ((match = varDeclarationRegex.exec(line)) !== null) {
         definedVars.add(match[2])
       }
 
+      // Get function parameters
       functionParamRegex.lastIndex = 0
       while ((match = functionParamRegex.exec(line)) !== null) {
         const params = match[1].split(",")
@@ -198,6 +214,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       }
     }
 
+    // Second pass: check for undefined variables
     const varUsageRegex = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\b/g
     const keywords = new Set([
       "if",
@@ -251,12 +268,14 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
 
+      // Skip comments
       if (line.trim().startsWith("//")) continue
 
       varUsageRegex.lastIndex = 0
       while ((match = varUsageRegex.exec(line)) !== null) {
         const varName = match[1]
         if (!definedVars.has(varName) && !keywords.has(varName)) {
+          // Check if it's not a property access
           const prevChar = line[match.index - 1] || ""
           if (prevChar !== "." && prevChar !== "[") {
             syntaxErrors.push({
@@ -270,6 +289,7 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       }
     }
 
+    // Check if the code is valid (no errors)
     isValid = syntaxErrors.filter((e) => e.severity === "error").length === 0
   } catch (error: any) {
     console.error("JavaScript analysis error:", error)
@@ -298,8 +318,10 @@ function analyzeTypeScript(code: string, title: string): CodeAnalysisResult {
   let isValid = false
 
   try {
+    // Create a TypeScript source file
     const sourceFile = ts.createSourceFile("snippet.ts", code, ts.ScriptTarget.Latest, true)
 
+    // Get the TypeScript compiler options with strict type checking
     const compilerOptions: ts.CompilerOptions = {
       strict: true,
       noImplicitAny: true,
@@ -313,6 +335,7 @@ function analyzeTypeScript(code: string, title: string): CodeAnalysisResult {
       module: ts.ModuleKind.ESNext,
     }
 
+    // Create a program
     const host = ts.createCompilerHost(compilerOptions)
     const program = ts.createProgram(["snippet.ts"], compilerOptions, {
       ...host,
@@ -321,6 +344,7 @@ function analyzeTypeScript(code: string, title: string): CodeAnalysisResult {
       },
     })
 
+    // Get diagnostics
     const syntacticDiagnostics = program.getSyntacticDiagnostics(sourceFile)
     const semanticDiagnostics = program.getSemanticDiagnostics(sourceFile)
     const allDiagnostics = [...syntacticDiagnostics, ...semanticDiagnostics]
@@ -355,6 +379,7 @@ function analyzeTypeScript(code: string, title: string): CodeAnalysisResult {
       })
     }
 
+    // Check for common typos in TypeScript keywords and types
     const tsKeywords = [
       { word: "interface", typos: ["inteface", "interace", "interfce"] },
       { word: "type", typos: ["tpye", "tyep"] },
@@ -391,8 +416,10 @@ function analyzeTypeScript(code: string, title: string): CodeAnalysisResult {
       })
     })
 
+    // If no errors, the code is valid
     isValid = syntaxErrors.filter((e) => e.severity === "error").length === 0
 
+    // Get the AST
     ast = sourceFile
   } catch (error: any) {
     syntaxErrors.push({
@@ -415,11 +442,14 @@ function analyzeTypeScript(code: string, title: string): CodeAnalysisResult {
 }
 
 function analyzeCpp(code: string, title: string): CodeAnalysisResult {
+  // For C++ we'll use a more comprehensive approach to catch common errors
   const syntaxErrors: SyntaxError[] = []
   let isValid = true
 
+  // Split code into lines for analysis
   const lines = code.split("\n")
 
+  // Check for unbalanced braces, parentheses, and brackets
   let braceCount = 0
   let parenCount = 0
   let bracketCount = 0
@@ -433,6 +463,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
     for (let j = 0; j < line.length; j++) {
       const char = line[j]
 
+      // Track braces
       if (char === "{") {
         braceCount++
         bracePositions.push([i + 1, j + 1])
@@ -445,13 +476,14 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
             message: "Closing brace without matching opening brace",
             severity: "error",
           })
-          braceCount = 0
+          braceCount = 0 // Reset to avoid multiple errors
           isValid = false
         } else {
           bracePositions.pop()
         }
       }
 
+      // Track parentheses
       if (char === "(") {
         parenCount++
         parenPositions.push([i + 1, j + 1])
@@ -464,13 +496,14 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
             message: "Closing parenthesis without matching opening parenthesis",
             severity: "error",
           })
-          parenCount = 0;
+          parenCount = 0 // Reset to avoid multiple errors
           isValid = false
         } else {
           parenPositions.pop()
         }
       }
 
+      // Track brackets
       if (char === "[") {
         bracketCount++
         bracketPositions.push([i + 1, j + 1])
@@ -483,7 +516,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
             message: "Closing bracket without matching opening bracket",
             severity: "error",
           })
-          bracketCount = 0;
+          bracketCount = 0 // Reset to avoid multiple errors
           isValid = false
         } else {
           bracketPositions.pop()
@@ -492,6 +525,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
     }
   }
 
+  // Report unclosed braces, parentheses, and brackets
   if (braceCount > 0) {
     bracePositions.forEach(([line, column]) => {
       syntaxErrors.push({
@@ -528,9 +562,11 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
     isValid = false
   }
 
+  // Check for missing semicolons in statements
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
 
+    // Skip comments, preprocessor directives, and lines ending with braces
     if (
       line.startsWith("//") ||
       line.startsWith("#") ||
@@ -541,7 +577,9 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
       continue
     }
 
+    // Check for lines that should end with semicolons
     if (!line.endsWith(";")) {
+      // Check if this is a statement that needs a semicolon
       const isStatement =
         /^(int|char|float|double|void|bool|long|short|unsigned|signed|auto|const|static|extern|volatile|register|struct|class|enum|typename|template|namespace|using|typedef)/.test(
           line,
@@ -563,6 +601,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
     }
   }
 
+  // Check for common C++ typos and errors
   const cppKeywords = [
     { word: "include", typos: ["incldue", "inlcude", "incude"] },
     { word: "iostream", typos: ["iosteam", "iostram", "iotsream"] },
@@ -604,6 +643,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
+    // Check for typos in keywords
     cppKeywords.forEach(({ word, typos }) => {
       typos.forEach((typo) => {
         const typoIndex = line.indexOf(typo)
@@ -618,6 +658,9 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
       })
     })
 
+    // Check for common C++ errors
+
+    // Missing #include guards
     if (i === 0 && line.includes("#include") && !code.includes("#ifndef") && !code.includes("#pragma once")) {
       syntaxErrors.push({
         line: 1,
@@ -627,6 +670,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
       })
     }
 
+    // Using namespace std in header
     if (line.includes("using namespace std") && code.includes("#include")) {
       syntaxErrors.push({
         line: i + 1,
@@ -635,6 +679,8 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
         severity: "warning",
       })
     }
+
+    // Missing return statement in non-void function
     if (line.includes("int main(") && !code.includes("return")) {
       syntaxErrors.push({
         line: i + 1,
@@ -644,6 +690,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
       })
     }
 
+    // Potential memory leaks
     if (line.includes("new ") && !code.includes("delete")) {
       syntaxErrors.push({
         line: i + 1,
@@ -653,6 +700,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
       })
     }
 
+    // Potential null pointer dereference
     if (line.includes("->") && (line.includes("NULL") || line.includes("nullptr"))) {
       syntaxErrors.push({
         line: i + 1,
@@ -663,6 +711,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
     }
   }
 
+  // Create a simple AST representation
   const ast = {
     type: "TranslationUnit",
     children: [
@@ -684,15 +733,19 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
 }
 
 function analyzeC(code: string, title: string): CodeAnalysisResult {
+  // C analysis is similar to C++ but with some language-specific checks
   const cppResult = analyzeCpp(code, title)
   const syntaxErrors = [...cppResult.syntaxErrors]
   let isValid = cppResult.isValid
 
+  // Additional C-specific checks
   const lines = code.split("\n")
 
+  // Check for C++-specific features used in C code
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
+    // Check for C++ style comments
     if (line.includes("//")) {
       syntaxErrors.push({
         line: i + 1,
@@ -702,6 +755,7 @@ function analyzeC(code: string, title: string): CodeAnalysisResult {
       })
     }
 
+    // Check for C++ keywords
     const cppOnlyKeywords = [
       "class",
       "namespace",
@@ -737,6 +791,7 @@ function analyzeC(code: string, title: string): CodeAnalysisResult {
       }
     })
 
+    // Check for variable declarations in the middle of code blocks (C89/C90)
     if (/^\s+\w+\s+\w+\s*=/.test(line) && i > 0) {
       const prevLine = lines[i - 1].trim()
       if (prevLine.endsWith(";") || prevLine.endsWith("}")) {
@@ -749,6 +804,7 @@ function analyzeC(code: string, title: string): CodeAnalysisResult {
       }
     }
 
+    // Check for missing function prototypes
     if (/^\w+\s+\w+\s*\(/.test(line) && !line.includes(";") && i > 0) {
       const functionName = line.match(/^\w+\s+(\w+)\s*\(/)?.[1]
       if (functionName && functionName !== "main") {
