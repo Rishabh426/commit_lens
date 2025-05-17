@@ -1,157 +1,176 @@
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+# CommitLens
 
+<p align="center">
+  <img src="public/logo.png" alt="CommitLens Logo" width="200" />
+</p>
 
-## Usage
+<p align="center">
+  A powerful online compiler and code analyzer that supports JavaScript, TypeScript, C++, and C.
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#how-it-works">How It Works</a> •
+  <a href="#project-structure">Project Structure</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#technologies">Technologies</a> •
+  <a href="#contributing">Contributing</a> •
+  <a href="#license">License</a>
+</p>
+
+## Features
+
+- **Multi-language Support**: Write and analyze code in JavaScript, TypeScript, C++, and C
+- **Comprehensive Syntax Analysis**: Detects syntax errors, typos, and potential bugs
+- **Detailed Error Reporting**: Provides line and column information for all errors
+- **Abstract Syntax Tree Visualization**: View the AST of your code
+- **Dark Mode Support**: Comfortable coding experience in any lighting condition
+- **Responsive Design**: Works on desktop and mobile devices
+
+## How It Works
+
+CommitLens is a Next.js application that provides a code editor and syntax analysis tool for multiple programming languages. Here's a detailed explanation of how the application works:
+
+### Entry Point
+
+The application entry point is `app/page.tsx`, which renders the landing page. The landing page includes:
+
+- Navigation bar with theme toggle
+- Hero section with "Try it now" button
+- Features section
+- Documentation section
+- Code examples section
+- Footer
+
+When a user clicks "Try it now" or "Get Started", they are redirected to the code editor page at `/landing/codeeditor`.
 
 ### Code Editor
 
-1. Navigate to the code editor by clicking "Try it now" or "Get Started" on the landing page
-2. Select your programming language from the dropdown menu
-3. Write or paste your code in the editor
-4. Click "Run Analysis" to analyze your code
-5. View the detailed analysis report with syntax errors and AST
+The code editor page (`app/landing/codeeditor/page.tsx`) is a client-side rendered page that:
 
+1. Provides a Monaco Editor instance for code editing
+2. Allows language selection (JavaScript, TypeScript, C++, C)
+3. Handles code input and analysis
+4. Navigates to the analysis report page when the user clicks "Run Analysis"
 
-### Analysis Report
-
-The analysis report provides:
-
-- Summary of syntax errors, warnings, and information
-- Detailed error messages with line and column information
-- Source code view with highlighted error lines
-- Abstract Syntax Tree (AST) visualization
-
-
-## Technologies
-
-- **Frontend Framework**:
-
-- [Next.js](https://nextjs.org/) - React framework for server-rendered applications
-- [React](https://reactjs.org/) - UI library
-
-
-
-- **Styling**:
-
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [shadcn/ui](https://ui.shadcn.com/) - UI component library built on Radix UI
-
-
-
-- **Code Editor**:
-
-- [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Code editor used in VS Code
-
-
-
-- **Code Analysis**:
-
-- [Esprima](https://esprima.org/) - JavaScript parser for syntax analysis
-- [Acorn](https://github.com/acornjs/acorn) - JavaScript parser (alternative to Esprima)
-- [TypeScript Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API) - For TypeScript analysis
-
-
-
-- **State Management**:
-
-- React Hooks - For local state management
-- sessionStorage - For passing data between pages
-
-
-
-- **Type Safety**:
-
-- [TypeScript](https://www.typescriptlang.org/) - Strongly typed JavaScript
-
-
-
-
-
-## Technical Implementation Details
+The code editor uses the Monaco Editor library, which is the same editor used in VS Code, providing features like syntax highlighting and code completion.
 
 ### Syntax Analysis
 
-The syntax analyzer (`lib/syntax-analyzer.ts`) is the core of the application. It uses different approaches for each supported language:
+When the user clicks "Run Analysis", the following happens:
 
-#### JavaScript Analysis
+1. The `analyzeCode` function in `lib/syntax-analyzer.ts` is called with the code and language
+2. Based on the language, a specific analyzer function is called:
+   - `analyzeJavaScript` for JavaScript
+   - `analyzeTypeScript` for TypeScript
+   - `analyzeCpp` for C++
+   - `analyzeC` for C
+3. The analyzer parses the code and identifies syntax errors, typos, and potential bugs
+4. The analysis result is stored in sessionStorage
+5. The user is redirected to the analysis report page
 
-1. Uses Esprima to parse the code and get basic syntax errors
-2. Falls back to Acorn for more detailed parsing if needed
-3. Performs custom checks for:
+#### JavaScript/TypeScript Analysis
 
-1. Typos in common JavaScript keywords
-2. Unbalanced brackets and parentheses
-3. Missing semicolons
-4. Undefined variables
-
-
-
-
-
-#### TypeScript Analysis
-
-1. Uses the TypeScript Compiler API with strict type checking
-2. Gets both syntactic and semantic diagnostics
-3. Performs additional checks for typos in TypeScript-specific keywords
-
+For JavaScript and TypeScript, the analyzer uses:
+- Esprima and Acorn for basic syntax parsing
+- TypeScript Compiler API for more advanced analysis
+- Custom logic for detecting typos, unbalanced brackets, and undefined variables
 
 #### C/C++ Analysis
 
-Since running a C/C++ compiler in the browser is not feasible, the analyzer uses custom logic to detect:
+For C and C++, the analyzer uses custom logic to detect:
+- Unbalanced braces, parentheses, and brackets
+- Missing semicolons
+- Typos in keywords
+- Common C/C++ errors like memory leaks and null pointer dereferences
 
-1. Unbalanced braces, parentheses, and brackets
-2. Missing semicolons in statements
-3. Typos in common C/C++ keywords
-4. Language-specific issues like memory leaks and null pointer dereferences
+### Analysis Report
 
+The analysis report page (`app/landing/analysis-report/page.tsx`) retrieves the analysis result from sessionStorage and displays:
 
-### Theme Switching
+1. A summary of syntax errors, warnings, and information
+2. Detailed error messages with line and column information
+3. The source code with highlighted error lines
+4. The Abstract Syntax Tree (AST) visualization
 
-The application supports dark and light modes using:
+## Project Structure
 
-1. Next.js `next-themes` package
-2. Tailwind CSS dark mode
-3. A theme toggle component that persists the user's preference
+```
+commitlens/
+├── app/                    # Next.js app directory (entry point)
+│   ├── layout.tsx          # Root layout with ThemeProvider and Toaster
+│   ├── page.tsx            # Landing page (main entry point)
+│   ├── globals.css         # Global styles
+│   └── landing/            # Landing page routes
+│       ├── codeeditor/     # Code editor page
+│       │   └── page.tsx    # Code editor implementation
+│       └── analysis-report/ # Analysis report page
+│           └── page.tsx    # Analysis report implementation
+│
+├── components/             # React components
+│   ├── hero.tsx            # Hero section with "Try it now" button
+│   ├── features.tsx        # Features section showcasing capabilities
+│   ├── documentation.tsx   # Documentation section with tabs
+│   ├── code-examples.tsx   # Code examples with syntax highlighting
+│   ├── footer.tsx          # Footer with contact information
+│   ├── theme-toggle.tsx    # Theme toggle component for dark/light mode
+│   ├── theme-provider.tsx  # Theme provider for dark mode support
+│   └── ui/                 # UI components (shadcn/ui)
+│       ├── button.tsx      # Button component
+│       ├── card.tsx        # Card component
+│       ├── dialog.tsx      # Dialog component
+│       ├── tabs.tsx        # Tabs component
+│       └── ...             # Other UI components
+│
+├── lib/                    # Utility functions and core logic
+│   └── syntax-analyzer.ts  # Core syntax analysis implementation
+│
+├── types/                  # TypeScript type definitions
+│   └── code.ts             # Types for code analysis (Language, SyntaxError, etc.)
+│
+├── public/                 # Static assets
+│   └── logo.png            # CommitLens logo
+│
+├── next.config.js          # Next.js configuration
+├── tailwind.config.js      # Tailwind CSS configuration
+├── tsconfig.json           # TypeScript configuration
+└── package.json            # Project dependencies and scripts
+```
 
+### Key Files and Their Purposes
 
-### Responsive Design
+- **app/page.tsx**: Main entry point that renders the landing page
+- **app/landing/codeeditor/page.tsx**: Code editor implementation
+- **app/landing/analysis-report/page.tsx**: Analysis report implementation
+- **lib/syntax-analyzer.ts**: Core syntax analysis logic
+- **types/code.ts**: TypeScript type definitions for code analysis
+- **components/theme-toggle.tsx**: Dark mode toggle implementation
+- **components/hero.tsx**: Hero section with main call-to-action
 
-The application is fully responsive and works on:
+## Code Flow
 
-- Desktop computers
-- Tablets
-- Mobile phones
+1. User lands on the home page (`app/page.tsx`)
+2. User clicks "Try it now" or "Get Started"
+3. User is redirected to the code editor (`app/landing/codeeditor/page.tsx`)
+4. User selects a language and writes code
+5. User clicks "Run Analysis"
+6. Code is analyzed by `lib/syntax-analyzer.ts`
+7. Analysis result is stored in sessionStorage
+8. User is redirected to the analysis report (`app/landing/analysis-report/page.tsx`)
+9. Analysis report displays errors, code, and AST
 
+## Installation
 
-This is achieved using Tailwind CSS's responsive utilities and a mobile-first design approach.
+### Prerequisites
 
-## Contributing
+- Node.js 16.x or higher
+- npm or yarn
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Setup
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Clone the repository:
 
-
-### Code Style
-
-- Use TypeScript for all new code
-- Follow the existing code style
-- Write tests for new features
-- Update documentation as needed
-
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgements
-
-- [Monaco Editor](https://microsoft.github.io/monaco-editor/) for the code editing experience
-- [TypeScript](https://www.typescriptlang.org/) for the compiler API
-- [Next.js](https://nextjs.org/) for the framework
-- [Tailwind CSS](https://tailwindcss.com/) for styling
-- [shadcn/ui](https://ui.shadcn.com/) for UI components
+```bash
+git clone https://github.com/yourusername/commitlens.git
+cd commitlens
