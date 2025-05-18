@@ -4,14 +4,31 @@ export interface SyntaxError {
   line: number
   column: number
   message: string
-  severity: "error" | "warning" | "info"
+  severity: "error" | "warning"
 }
 
 export interface CodeAnalysisResult {
-  language: Language
+  language: string
   code: string
   title: string
   syntaxErrors: SyntaxError[]
-  ast: any 
+  ast: any
   isValid: boolean
+}
+
+export interface CodeOutput {
+  id: string
+  language: Language
+  code: string
+  output: string
+  timestamp: number
+  success: boolean
+}
+
+export interface SavedCode {
+  id: string
+  language: Language
+  code: string
+  title: string
+  timestamp: number
 }

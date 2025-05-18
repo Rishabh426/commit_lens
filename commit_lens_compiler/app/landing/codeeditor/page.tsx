@@ -1,15 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Play } from "lucide-react"
+import { ArrowLeft, Play, Save, Trash2, Code } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import dynamic from "next/dynamic"
+import { toast } from "sonner"
 import type { Language } from "@/types/code"
 import { analyzeCode } from "@/lib/syntax-analyze"
+import { executeCode, saveCode } from "@/lib/code-executor"
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -83,11 +85,32 @@ export default function CodeEditorPage() {
   const [code, setCode] = useState<string>(DEFAULT_CODE.javascript)
   const [title, setTitle] = useState<string>("Untitled Snippet")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isExecuting, setIsExecuting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Update code when language changes
   useEffect(() => {
-    setCode(DEFAULT_CODE[language])
-  }, [language])
+    const lastCode = localStorage.getItem("lastCode")
+    const lastLanguage = localStorage.getItem("lastLanguage") as Language | null
+    const lastTitle = localStorage.getItem("lastTitle")
+
+    if (lastCode) {
+      setCode(lastCode)
+    }
+
+    if (lastLanguage) {
+      setLanguage(lastLanguage)
+    }
+
+    if (lastTitle) {
+      setTitle(lastTitle)
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem("lastCode", code)
+    localStorage.setItem("lastLanguage", language)
+    localStorage.setItem("lastTitle", title)
+  }, [code, language, title])
 
   const handleLanguageChange = (value: string) => {
     setLanguage(value as Language)
@@ -99,18 +122,49 @@ export default function CodeEditorPage() {
     }
   }
 
+  const handleClear = () => {
+    setCode(DEFAULT_CODE[language])
+    toast.success("Editor cleared")
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      saveCode(code, language, title)
+      toast.success("Code saved successfully")
+    } catch (error) {
+      console.error("Error saving code:", error)
+      toast.error("Failed to save code")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const analyzeAndNavigate = async () => {
     setIsAnalyzing(true)
     try {
       const analysisResult = await analyzeCode(code, language, title)
-
       sessionStorage.setItem("codeAnalysisResult", JSON.stringify(analysisResult))
-
       router.push("/landing/report")
     } catch (error) {
       console.error("Error analyzing code:", error)
+      toast.error("Failed to analyze code")
     } finally {
       setIsAnalyzing(false)
+    }
+  }
+
+  const executeAndNavigate = async () => {
+    setIsExecuting(true)
+    try {
+      const outputResult = await executeCode(code, language)
+      sessionStorage.setItem("codeOutput", JSON.stringify(outputResult))
+      router.push("/landing/output")
+    } catch (error) {
+      console.error("Error executing code:", error)
+      toast.error("Failed to execute code")
+    } finally {
+      setIsExecuting(false)
     }
   }
 
@@ -146,23 +200,25 @@ export default function CodeEditorPage() {
               <SelectItem value="c">C</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            onClick={analyzeAndNavigate}
-            disabled={isAnalyzing}
-            className="bg-blue-700 hover:bg-blue-800 text-white"
-          >
-            {isAnalyzing ? (
-              <>
-                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Run Analysis
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleClear}
+              variant="outline"
+              className="bg-gray-800 hover:bg-gray-700 border-gray-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              variant="outline"
+              className="bg-gray-800 hover:bg-gray-700 border-gray-700 text-white"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -185,6 +241,43 @@ export default function CodeEditorPage() {
           />
         </div>
       </div>
+
+      <footer className="h-16 border-t border-gray-700 flex items-center justify-end px-6 gap-4">
+        <Button
+          onClick={executeAndNavigate}
+          disabled={isExecuting}
+          className="bg-green-700 hover:bg-green-800 text-white"
+        >
+          {isExecuting ? (
+            <>
+              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              Executing...
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4 mr-2" />
+              Run & Output
+            </>
+          )}
+        </Button>
+        <Button
+          onClick={analyzeAndNavigate}
+          disabled={isAnalyzing}
+          className="bg-blue-700 hover:bg-blue-800 text-white"
+        >
+          {isAnalyzing ? (
+            <>
+              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Code className="h-4 w-4 mr-2" />
+              Analyze Code
+            </>
+          )}
+        </Button>
+      </footer>
     </div>
   )
 }

@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Check, X, AlertTriangle } from "lucide-react"
+import { ArrowLeft, AlertTriangle, XCircle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
-import type { CodeAnalysisResult } from "@/types/code"
+import { useRouter } from "next/navigation"
+import type { CodeAnalysisResult, SyntaxError } from "@/types/code"
 
 export default function AnalysisReportPage() {
+  const router = useRouter()
   const [analysisResult, setAnalysisResult] = useState<CodeAnalysisResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -38,7 +39,7 @@ export default function AnalysisReportPage() {
   if (!analysisResult) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
-        <AlertTriangle className="h-16 w-16 text-yellow-500 mb-4" />
+        <XCircle className="h-16 w-16 text-red-500 mb-4" />
         <h1 className="text-2xl font-bold mb-2">No Analysis Data Found</h1>
         <p className="text-gray-400 mb-6">There is no code analysis data available to display.</p>
         <Link href="/landing/codeeditor">
@@ -48,10 +49,10 @@ export default function AnalysisReportPage() {
     )
   }
 
-  const { language, code, title, syntaxErrors, ast, isValid } = analysisResult
-
-  const errorCount = syntaxErrors.filter((e) => e.severity === "error").length
-  const warningCount = syntaxErrors.filter((e) => e.severity === "warning").length
+  const { language, code, title, syntaxErrors, isValid } = analysisResult
+  
+  const errors = syntaxErrors.filter((error) => error.severity === "error")
+  const warnings = syntaxErrors.filter((error) => error.severity === "warning")
 
   return (
     <div className="min-h-screen bg-gray-900 text-white pb-16">
@@ -75,130 +76,118 @@ export default function AnalysisReportPage() {
       <div className="container mx-auto px-4">
         <Card className="bg-gray-800 border-gray-700 mb-8">
           <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-2xl text-white">{title}</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Language: {language.charAt(0).toUpperCase() + language.slice(1)}
-                </CardDescription>
-              </div>
-              <div className="flex items-center">
-                {isValid ? (
-                  <Badge className="bg-green-600 hover:bg-green-700 flex items-center gap-1">
-                    <Check className="h-4 w-4" />
-                    <span>Syntax Valid</span>
-                  </Badge>
-                ) : (
-                  <Badge className="bg-red-600 hover:bg-red-700 flex items-center gap-1">
-                    <X className="h-4 w-4" />
-                    <span>Syntax Invalid</span>
-                  </Badge>
-                )}
-              </div>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-2xl text-white">Analysis Results</CardTitle>
+              <Badge className={isValid ? "bg-green-600" : "bg-red-600"}>
+                {isValid ? "Valid" : "Invalid"} {language.charAt(0).toUpperCase() + language.slice(1)} Code
+              </Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Errors</p>
-                  <p className="text-2xl font-bold text-white">{errorCount}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-red-900/20 border border-red-900/30 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-red-400">Errors</h3>
+                  <span className="text-2xl font-bold text-red-400">{errors.length}</span>
                 </div>
-                <X className="h-8 w-8 text-red-500" />
               </div>
-              <div className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Warnings</p>
-                  <p className="text-2xl font-bold text-white">{warningCount}</p>
+              <div className="bg-yellow-900/20 border border-yellow-900/30 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-yellow-400">Warnings</h3>
+                  <span className="text-2xl font-bold text-yellow-400">{warnings.length}</span>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-yellow-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="errors" className="w-full">
-          <TabsList className="bg-gray-800 border-gray-700">
-            <TabsTrigger value="errors">Syntax Errors</TabsTrigger>
-            <TabsTrigger value="code">Code</TabsTrigger>
-            <TabsTrigger value="ast">Abstract Syntax Tree</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="errors" className="mt-4">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Syntax Errors and Warnings</CardTitle>
-                <CardDescription className="text-gray-400">
-                  {syntaxErrors.length === 0
-                    ? "No syntax errors or warnings found."
-                    : `Found ${syntaxErrors.length} issue${syntaxErrors.length === 1 ? "" : "s"}.`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {syntaxErrors.length > 0 ? (
-                  <div className="space-y-4">
-                    {syntaxErrors.map((error, index) => (
-                      <div key={index} className="bg-gray-700 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          {error.severity === "error" ? (
-                            <Badge className="bg-red-600">Error</Badge>
-                          ) : (
-                            <Badge className="bg-yellow-600">Warning</Badge>
-                          )}
-                          <span className="text-gray-300">
-                            Line {error.line}, Column {error.column}
-                          </span>
-                        </div>
-                        <p className="text-white">{error.message}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <Check className="h-16 w-16 text-green-500 mb-4" />
-                    <p className="text-xl font-medium text-white">No syntax errors found</p>
-                    <p className="text-gray-400">Your code is syntactically correct.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="code" className="mt-4">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Source Code</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto text-white font-mono text-sm">
-                  {code.split("\n").map((line, i) => (
-                    <div key={i} className="relative">
-                      <span className="inline-block w-8 text-gray-500 select-none">{i + 1}</span>
-                      <span>{line}</span>
-                      {syntaxErrors.some((e) => e.line === i + 1) && (
-                        <span className="absolute left-0 w-full bg-red-900 bg-opacity-20 -z-10"></span>
-                      )}
-                    </div>
-                  ))}
-                </pre>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="ast" className="mt-4">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Abstract Syntax Tree</CardTitle>
-                <CardDescription className="text-gray-400">Visual representation of the code structure</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gray-900 p-4 rounded-lg overflow-x-auto">
-                  <pre className="text-white font-mono text-sm">{JSON.stringify(ast, null, 2)}</pre>
+        {errors.length > 0 && (
+          <Card className="bg-gray-800 border-gray-700 mb-6">
+            <CardHeader>
+              <CardTitle className="text-red-400">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-5 w-5" />
+                  <span>Errors</span>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {errors.map((error, index) => (
+                  <ErrorItem key={index} error={error} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {warnings.length > 0 && (
+          <Card className="bg-gray-800 border-gray-700 mb-6">
+            <CardHeader>
+              <CardTitle className="text-yellow-400">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span>Warnings</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {warnings.map((warning, index) => (
+                  <ErrorItem key={index} error={warning} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white">Source Code</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-900 rounded-lg overflow-hidden">
+              <pre className="p-4 overflow-x-auto text-white font-mono text-sm">
+                {code.split("\n").map((line, i) => {
+                  const lineErrors = syntaxErrors.filter((e) => e.line === i + 1)
+                  const hasError = lineErrors.length > 0
+                  
+                  return (
+                    <div 
+                      key={i} 
+                      className={`flex ${hasError ? "bg-red-900/20" : ""}`}
+                    >
+                      <span className="inline-block w-10 text-right pr-4 text-gray-500 select-none">
+                        {i + 1}
+                      </span>
+                      <span>{line}</span>
+                    </div>
+                  )
+                })}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function ErrorItem({ error }: { error: SyntaxError }) {
+  return (
+    <div className={`p-3 rounded-lg ${error.severity === "error" ? "bg-red-900/20" : "bg-yellow-900/20"}`}>
+      <div className="flex justify-between items-start">
+        <div className="flex items-center gap-2">
+          {error.severity === "error" ? (
+            <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+          )}
+          <span className="text-white">{error.message}</span>
+        </div>
+        <Badge variant="outline" className="bg-transparent border-gray-700 text-gray-400">
+          Line {error.line}, Col {error.column}
+        </Badge>
       </div>
     </div>
   )
