@@ -6,7 +6,7 @@ import Features from "@/components/features"
 import Documentation from "@/components/documentation"
 import CodeExamples from "@/components/code_example"
 import Footer from "@/components/footer"
-// import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/theme_toggle"
 
 export default function Home() {
   const router = useRouter()
@@ -47,12 +47,12 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              {/* <ThemeToggle /> */}
+              <ThemeToggle />
               <button
                 className="px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition"
                 onClick={navigateToCodeEditor}
               >
-                Get Started
+                Try it now
               </button>
             </div>
           </div>
