@@ -104,7 +104,7 @@ export default function CodeEditorPage() {
     if (lastTitle) {
       setTitle(lastTitle)
     }
-  }, [])
+  }, []) 
 
   useEffect(() => {
     localStorage.setItem("lastCode", code)
@@ -143,6 +143,10 @@ export default function CodeEditorPage() {
   const analyzeAndNavigate = async () => {
     setIsAnalyzing(true)
     try {
+      localStorage.setItem("lastCode", code)
+      localStorage.setItem("lastLanguage", language)
+      localStorage.setItem("lastTitle", title)
+
       const analysisResult = await analyzeCode(code, language, title)
       sessionStorage.setItem("codeAnalysisResult", JSON.stringify(analysisResult))
       router.push("/landing/report")
@@ -157,6 +161,10 @@ export default function CodeEditorPage() {
   const executeAndNavigate = async () => {
     setIsExecuting(true)
     try {
+      localStorage.setItem("lastCode", code)
+      localStorage.setItem("lastLanguage", language)
+      localStorage.setItem("lastTitle", title)
+
       const outputResult = await executeCode(code, language)
       sessionStorage.setItem("codeOutput", JSON.stringify(outputResult))
       router.push("/landing/output")

@@ -69,40 +69,51 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
     }
 
     const jsKeywords = [
-      { word: "function", typos: ["functon", "funtion", "funciton", "functoin"] },
-      { word: "return", typos: ["retrn", "retrun", "reutrn", "rteurn"] },
-      { word: "const", typos: ["cosnt", "cnst", "conts"] },
-      { word: "let", typos: ["lte", "elt"] },
-      { word: "var", typos: ["vra", "vaar"] },
-      { word: "if", typos: ["fi", "ig"] },
-      { word: "else", typos: ["esle", "eles"] },
-      { word: "for", typos: ["fro", "ofr"] },
-      { word: "while", typos: ["whiel", "whlie", "wihle"] },
-      { word: "switch", typos: ["swtich", "siwtch", "swithc"] },
-      { word: "case", typos: ["caes", "csae"] },
-      { word: "break", typos: ["braek", "brak", "breka"] },
-      { word: "continue", typos: ["contniue", "contiue", "contineu"] },
-      { word: "console", typos: ["consoel", "consle", "concole"] },
-      { word: "log", typos: ["lg", "lgo"] },
+      { word: "function", typos: ["functon", "funtion", "funciton"] },
+      { word: "return", typos: ["retrun", "retrn"] },
+      { word: "const", typos: ["cosnt", "conts"] },
+      { word: "let", typos: ["lte"] },
+      { word: "var", typos: ["vra"] },
+      { word: "if", typos: ["fi"] },
+      { word: "else", typos: ["esle"] },
+      { word: "for", typos: ["fro"] },
+      { word: "while", typos: ["whiel", "whlie"] },
+      { word: "switch", typos: ["swtich"] },
+      { word: "case", typos: ["caes"] },
+      { word: "break", typos: ["braek"] },
+      { word: "continue", typos: ["contniue"] },
+      { word: "console", typos: ["consoel"] },
     ]
 
+    const stringRegex = /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|`([^`\\]|\\.)*`/g
+    const commentRegex = /\/\/.*$|\/\*[\s\S]*?\*\//g
+
     const lines = code.split("\n")
-    jsKeywords.forEach(({ word, typos }) => {
-      typos.forEach((typo) => {
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
-          const typoIndex = line.indexOf(typo)
-          if (typoIndex !== -1) {
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+
+      if (line.trim().startsWith("//")) continue
+
+      const processedLine = line
+        .replace(stringRegex, (match) => " ".repeat(match.length))
+        .replace(commentRegex, (match) => " ".repeat(match.length))
+
+      jsKeywords.forEach(({ word, typos }) => {
+        typos.forEach((typo) => {
+          const typoRegex = new RegExp(`\\b${typo}\\b`, "g")
+          let match
+          while ((match = typoRegex.exec(processedLine)) !== null) {
             syntaxErrors.push({
               line: i + 1,
-              column: typoIndex + 1,
+              column: match.index + 1,
               message: `Possible typo: '${typo}' might be '${word}'`,
               severity: "warning",
             })
           }
-        }
+        })
       })
-    })
+    }
 
     const brackets = [
       { open: "(", close: ")", name: "parenthesis" },
@@ -246,25 +257,53 @@ async function analyzeJavaScript(code: string, title: string): Promise<CodeAnaly
       "process",
       "require",
       "module",
+      "setTimeout",
+      "setInterval",
+      "clearTimeout",
+      "clearInterval",
+      "fetch",
+      "Promise",
+      "Map",
+      "Set",
+      "Array",
+      "Object",
+      "String",
+      "Number",
+      "Boolean",
+      "Math",
+      "Date",
+      "JSON",
+      "Error",
     ])
+
+    const stringRegex2 = /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|`([^`\\]|\\.)*`/g
+    const commentRegex2 = /\/\/.*$|\/\*[\s\S]*?\*\//g
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
 
       if (line.trim().startsWith("//")) continue
 
+      const processedLine = line
+        .replace(stringRegex2, (match) => " ".repeat(match.length))
+        .replace(commentRegex2, (match) => " ".repeat(match.length))
+
       varUsageRegex.lastIndex = 0
-      while ((match = varUsageRegex.exec(line)) !== null) {
+      let match
+      while ((match = varUsageRegex.exec(processedLine)) !== null) {
         const varName = match[1]
-        if (!definedVars.has(varName) && !keywords.has(varName)) {
-          const prevChar = line[match.index - 1] || ""
+        if (!definedVars.has(varName) && !keywords.has(varName) && varName.length > 1) {
+          const prevChar = processedLine[match.index - 1] || ""
           if (prevChar !== "." && prevChar !== "[") {
-            syntaxErrors.push({
-              line: i + 1,
-              column: match.index + 1,
-              message: `'${varName}' might be undefined`,
-              severity: "warning",
-            })
+            const occurrences = (processedLine.match(new RegExp(`\\b${varName}\\b`, "g")) || []).length
+            if (occurrences > 1 || code.split(varName).length > 3) {
+              syntaxErrors.push({
+                line: i + 1,
+                column: match.index + 1,
+                message: `'${varName}' might be undefined`,
+                severity: "warning",
+              })
+            }
           }
         }
       }
@@ -356,40 +395,50 @@ function analyzeTypeScript(code: string, title: string): CodeAnalysisResult {
     }
 
     const tsKeywords = [
-      { word: "interface", typos: ["inteface", "interace", "interfce"] },
-      { word: "type", typos: ["tpye", "tyep"] },
-      { word: "extends", typos: ["extedns", "extneds", "extens"] },
-      { word: "implements", typos: ["implemnets", "implemets", "implments"] },
-      { word: "class", typos: ["calss", "clss"] },
-      { word: "constructor", typos: ["consturctor", "construtor", "constuctor"] },
-      { word: "private", typos: ["privte", "priavte"] },
-      { word: "public", typos: ["pubilc", "publc"] },
-      { word: "protected", typos: ["protceted", "proected", "proteted"] },
-      { word: "readonly", typos: ["readony", "raedonly", "readonyl"] },
-      { word: "string", typos: ["stirng", "strig", "strng"] },
-      { word: "number", typos: ["numbr", "numbre", "nubmer"] },
-      { word: "boolean", typos: ["boolaen", "booean", "bolean"] },
-      { word: "undefined", typos: ["undefind", "udnefined", "undefned"] },
-      { word: "null", typos: ["nul", "nll"] },
+      { word: "interface", typos: ["inteface", "interace"] },
+      { word: "type", typos: ["tpye"] },
+      { word: "extends", typos: ["extedns", "extneds"] },
+      { word: "implements", typos: ["implemnets"] },
+      { word: "class", typos: ["calss"] },
+      { word: "constructor", typos: ["consturctor"] },
+      { word: "private", typos: ["privte"] },
+      { word: "public", typos: ["pubilc"] },
+      { word: "protected", typos: ["protceted"] },
+      { word: "readonly", typos: ["readony"] },
+      { word: "string", typos: ["stirng"] },
+      { word: "number", typos: ["numbr"] },
+      { word: "boolean", typos: ["boolaen"] },
     ]
 
     const lines = code.split("\n")
-    tsKeywords.forEach(({ word, typos }) => {
-      typos.forEach((typo) => {
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i]
-          const typoIndex = line.indexOf(typo)
-          if (typoIndex !== -1) {
+
+    const stringRegex = /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|`([^`\\]|\\.)*`/g
+    const commentRegex = /\/\/.*$|\/\*[\s\S]*?\*\//g
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+
+      if (line.trim().startsWith("//")) continue
+
+      const processedLine = line
+        .replace(stringRegex, (match) => " ".repeat(match.length))
+        .replace(commentRegex, (match) => " ".repeat(match.length))
+
+      tsKeywords.forEach(({ word, typos }) => {
+        typos.forEach((typo) => {
+          const typoRegex = new RegExp(`\\b${typo}\\b`, "g")
+          let match
+          while ((match = typoRegex.exec(processedLine)) !== null) {
             syntaxErrors.push({
               line: i + 1,
-              column: typoIndex + 1,
+              column: match.index + 1,
               message: `Possible typo: '${typo}' might be '${word}'`,
               severity: "warning",
             })
           }
-        }
+        })
       })
-    })
+    }
 
     isValid = syntaxErrors.filter((e) => e.severity === "error").length === 0
 
@@ -445,7 +494,7 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
             message: "Closing brace without matching opening brace",
             severity: "error",
           })
-          braceCount = 0 
+          braceCount = 0
           isValid = false
         } else {
           bracePositions.pop()
@@ -564,60 +613,61 @@ function analyzeCpp(code: string, title: string): CodeAnalysisResult {
   }
 
   const cppKeywords = [
-    { word: "include", typos: ["incldue", "inlcude", "incude"] },
-    { word: "iostream", typos: ["iosteam", "iostram", "iotsream"] },
-    { word: "namespace", typos: ["namepsace", "namesapce", "namespacce"] },
-    { word: "using", typos: ["usign", "ussing", "usng"] },
-    { word: "std", typos: ["sdt", "st", "stdd"] },
-    { word: "cout", typos: ["cuot", "cotu", "cout"] },
-    { word: "cin", typos: ["cni", "icn", "ciin"] },
-    { word: "endl", typos: ["edl", "enld", "endll"] },
-    { word: "return", typos: ["retrn", "retrun", "reutrn", "rteurn"] },
-    { word: "class", typos: ["calss", "clss", "clas"] },
-    { word: "struct", typos: ["strcut", "stuct", "strct"] },
-    { word: "public", typos: ["pubilc", "publc", "pubic"] },
-    { word: "private", typos: ["privte", "priavte", "privat"] },
-    { word: "protected", typos: ["protceted", "proected", "proteted"] },
-    { word: "virtual", typos: ["virtal", "vitrual", "virtaul"] },
-    { word: "static", typos: ["statci", "statc", "sttaic"] },
-    { word: "const", typos: ["cosnt", "cnst", "conts"] },
-    { word: "void", typos: ["viod", "vodi", "voi"] },
-    { word: "int", typos: ["itn", "nit", "intt"] },
-    { word: "char", typos: ["cahr", "chr", "charr"] },
-    { word: "float", typos: ["flota", "flot", "floatt"] },
-    { word: "double", typos: ["duoble", "doule", "doubel"] },
-    { word: "bool", typos: ["boool", "boo", "booll"] },
-    { word: "true", typos: ["treu", "ture", "tru"] },
-    { word: "false", typos: ["fasle", "flase", "fals"] },
-    { word: "if", typos: ["fi", "ig", "iff"] },
-    { word: "else", typos: ["esle", "eles", "lese"] },
-    { word: "for", typos: ["fro", "ofr", "forr"] },
-    { word: "while", typos: ["whiel", "whlie", "wihle"] },
-    { word: "switch", typos: ["swtich", "siwtch", "swithc"] },
-    { word: "case", typos: ["caes", "csae", "casse"] },
-    { word: "break", typos: ["braek", "brak", "breka"] },
-    { word: "continue", typos: ["contniue", "contiue", "contineu"] },
-    { word: "template", typos: ["tempalte", "templte", "tempate"] },
-    { word: "typename", typos: ["tyepname", "typenam", "typenme"] },
+    { word: "include", typos: ["incldue", "inlcude"] },
+    { word: "iostream", typos: ["iosteam"] },
+    { word: "namespace", typos: ["namepsace"] },
+    { word: "using", typos: ["usign"] },
+    { word: "std", typos: ["sdt"] },
+    { word: "cout", typos: ["cuot"] },
+    { word: "cin", typos: ["cni"] },
+    { word: "endl", typos: ["edl"] },
+    { word: "return", typos: ["retrun"] },
+    { word: "class", typos: ["calss"] },
+    { word: "struct", typos: ["strcut"] },
+    { word: "public", typos: ["pubilc"] },
+    { word: "private", typos: ["privte"] },
+    { word: "protected", typos: ["protceted"] },
+    { word: "virtual", typos: ["virtal"] },
+    { word: "static", typos: ["statci"] },
+    { word: "const", typos: ["cosnt"] },
+    { word: "void", typos: ["viod"] },
+    { word: "int", typos: ["itn"] },
+    { word: "char", typos: ["cahr"] },
+    { word: "float", typos: ["flota"] },
+    { word: "double", typos: ["duoble"] },
+    { word: "bool", typos: ["boool"] },
   ]
+
+  const stringRegex = /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g
+  const commentRegex = /\/\/.*$|\/\*[\s\S]*?\*\//g
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
+    if (line.trim().startsWith("//") || line.trim().startsWith("#")) continue
+
+    const processedLine = line
+      .replace(stringRegex, (match) => " ".repeat(match.length))
+      .replace(commentRegex, (match) => " ".repeat(match.length))
+
     cppKeywords.forEach(({ word, typos }) => {
       typos.forEach((typo) => {
-        const typoIndex = line.indexOf(typo)
-        if (typoIndex !== -1) {
+        const typoRegex = new RegExp(`\\b${typo}\\b`, "g")
+        let match
+        while ((match = typoRegex.exec(processedLine)) !== null) {
           syntaxErrors.push({
             line: i + 1,
-            column: typoIndex + 1,
+            column: match.index + 1,
             message: `Possible typo: '${typo}' might be '${word}'`,
             severity: "warning",
           })
         }
       })
     })
+  }
 
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
     if (i === 0 && line.includes("#include") && !code.includes("#ifndef") && !code.includes("#pragma once")) {
       syntaxErrors.push({
         line: 1,

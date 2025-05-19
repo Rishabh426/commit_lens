@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, AlertTriangle, XCircle } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -50,7 +50,7 @@ export default function AnalysisReportPage() {
   }
 
   const { language, code, title, syntaxErrors, isValid } = analysisResult
-  
+
   const errors = syntaxErrors.filter((error) => error.severity === "error")
   const warnings = syntaxErrors.filter((error) => error.severity === "warning")
 
@@ -151,15 +151,10 @@ export default function AnalysisReportPage() {
                 {code.split("\n").map((line, i) => {
                   const lineErrors = syntaxErrors.filter((e) => e.line === i + 1)
                   const hasError = lineErrors.length > 0
-                  
+
                   return (
-                    <div 
-                      key={i} 
-                      className={`flex ${hasError ? "bg-red-900/20" : ""}`}
-                    >
-                      <span className="inline-block w-10 text-right pr-4 text-gray-500 select-none">
-                        {i + 1}
-                      </span>
+                    <div key={i} className={`flex ${hasError ? "bg-red-900/20" : ""}`}>
+                      <span className="inline-block w-10 text-right pr-4 text-gray-500 select-none">{i + 1}</span>
                       <span>{line}</span>
                     </div>
                   )
@@ -168,6 +163,14 @@ export default function AnalysisReportPage() {
             </div>
           </CardContent>
         </Card>
+        <div className="mt-6 flex justify-end">
+          <Button
+            onClick={() => router.push("/landing/codeeditor")}
+            className="bg-blue-700 hover:bg-blue-800 text-white"
+          >
+            Back to Editor
+          </Button>
+        </div>
       </div>
     </div>
   )
