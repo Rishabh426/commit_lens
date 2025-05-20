@@ -1,31 +1,53 @@
 import type { Language, CodeOutput, SavedCode } from "@/types/code"
 
-// Update the executeJsTs function to properly handle TypeScript by transpiling it first
+async function loadTypeScriptCompiler(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      resolve()
+      return
+    }
 
-function executeJsTs(code: string, language: Language): string {
+    if (window.ts) {
+      resolve()
+      return
+    }
+
+    const script = document.createElement("script")
+    script.src = "https://cdn.jsdelivr.net/npm/typescript@4.9.5/lib/typescript.min.js"
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error("Failed to load TypeScript compiler"))
+    document.head.appendChild(script)
+  })
+}
+
+async function executeJsTs(code: string, language: Language): Promise<string> {
   try {
-    // If it's TypeScript, we need to transpile it first
     if (language === "typescript") {
       try {
-        // Use the TypeScript compiler to transpile the code
-        const ts = require("typescript")
-        const transpileResult = ts.transpileModule(code, {
-          compilerOptions: {
-            module: ts.ModuleKind.CommonJS,
-            target: ts.ScriptTarget.ES2015,
-            strict: false,
-            removeComments: true,
-          },
-        })
+        if (typeof window !== "undefined" && !window.ts) {
+          await loadTypeScriptCompiler()
+        }
 
-        // Use the transpiled JavaScript code
-        code = transpileResult.outputText
+        if (typeof window !== "undefined" && window.ts) {
+          const transpileResult = window.ts.transpileModule(code, {
+            compilerOptions: {
+              module: window.ts.ModuleKind.CommonJS,
+              target: window.ts.ScriptTarget.ES2015,
+              strict: false,
+              removeComments: true,
+            },
+          })
+
+          code = transpileResult.outputText
+        } else {
+          code = simplifyTypeScript(code)
+        }
       } catch (transpileError: any) {
         return `Transpilation error: ${transpileError.message}`
       }
     }
 
-    // Now execute the JavaScript code (or transpiled TypeScript)
     const result = new Function(`
       try {
         // Capture console.log output
@@ -56,12 +78,21 @@ function executeJsTs(code: string, language: Language): string {
   }
 }
 
-// Placeholder for C/C++ execution (would require a backend service)
+function simplifyTypeScript(code: string): string {
+  return (
+    code
+      .replace(/interface\s+\w+\s*\{[^}]*\}/g, "")
+      .replace(/type\s+\w+\s*=\s*[^;]*;/g, "")
+      .replace(/:\s*\w+(\[\])?(\s*\|\s*\w+(\[\])?)*\s*(?=[,)])/g, "")
+      .replace(/\)\s*:\s*\w+(\[\])?(\s*\|\s*\w+(\[\])?)*\s*(?=[{])/g, ")")
+      .replace(/:\s*\w+(\[\])?(\s*\|\s*\w+(\[\])?)*\s*(?=[=;])/g, "")
+  )
+}
+
 function executeCCpp(code: string): string {
   return "C/C++ execution requires a backend compiler service.\nThis would typically be implemented with a server that compiles and runs the code."
 }
 
-// Main executor function
 export async function executeCode(code: string, language: Language): Promise<CodeOutput> {
   const id = Math.random().toString(36).substring(2, 15)
   const timestamp = Date.now()
@@ -72,7 +103,7 @@ export async function executeCode(code: string, language: Language): Promise<Cod
     switch (language) {
       case "javascript":
       case "typescript":
-        output = executeJsTs(code, language)
+        output = await executeJsTs(code, language)
         break
       case "c":
       case "cpp":
@@ -101,7 +132,6 @@ export async function executeCode(code: string, language: Language): Promise<Cod
   }
 }
 
-// Function to save code to localStorage
 export function saveCode(code: string, language: Language, title = "Untitled"): SavedCode {
   const id = Math.random().toString(36).substring(2, 15)
   const timestamp = Date.now()
@@ -114,24 +144,20 @@ export function saveCode(code: string, language: Language, title = "Untitled"): 
     timestamp,
   }
 
-  // Get existing saved codes
   const savedCodesJson = localStorage.getItem("savedCodes")
   const savedCodes: SavedCode[] = savedCodesJson ? JSON.parse(savedCodesJson) : []
 
-  // Add new code and save
   savedCodes.push(savedCode)
   localStorage.setItem("savedCodes", JSON.stringify(savedCodes))
 
   return savedCode
 }
 
-// Function to get all saved codes
 export function getSavedCodes(): SavedCode[] {
   const savedCodesJson = localStorage.getItem("savedCodes")
   return savedCodesJson ? JSON.parse(savedCodesJson) : []
 }
 
-// Function to clear saved code by ID
 export function clearSavedCode(id: string): boolean {
   const savedCodesJson = localStorage.getItem("savedCodes")
   if (!savedCodesJson) return false
@@ -141,4 +167,34 @@ export function clearSavedCode(id: string): boolean {
 
   localStorage.setItem("savedCodes", JSON.stringify(newSavedCodes))
   return true
+}
+
+export function savePreviousCode(code: string, language: Language, title = "Untitled"): void {
+  if (!code) return
+
+  localStorage.setItem("previousCode", code)
+  localStorage.setItem("previousLanguage", language)
+  localStorage.setItem("previousTitle", title)
+}
+
+export function getPreviousCode(): { code: string; language: Language; title: string } | null {
+  const previousCode = localStorage.getItem("previousCode")
+  const previousLanguage = localStorage.getItem("previousLanguage") as Language | null
+  const previousTitle = localStorage.getItem("previousTitle")
+
+  if (!previousCode || !previousLanguage) {
+    return null
+  }
+
+  return {
+    code: previousCode,
+    language: previousLanguage,
+    title: previousTitle || "Untitled",
+  }
+}
+
+export function clearPreviousCode(): void {
+  localStorage.removeItem("previousCode")
+  localStorage.removeItem("previousLanguage")
+  localStorage.removeItem("previousTitle")
 }

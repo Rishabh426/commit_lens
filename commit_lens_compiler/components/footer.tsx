@@ -15,7 +15,7 @@ export default function Footer() {
               A powerful online compiler and code analyzer that supports JavaScript, TypeScript, C++, and C.
             </p>
             <div className="flex space-x-4">
-              <Link href="https://github.com" className="text-gray-400 hover:text-white transition">
+              <Link href="https://github.com/Rishabh426/commit_lens" className="text-gray-400 hover:text-white transition">
                 <Github className="h-6 w-6" />
               </Link>
             </div>
@@ -46,7 +46,7 @@ export default function Footer() {
             <h3 className="font-bold text-lg mb-4">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="https://github.com" className="text-gray-400 hover:text-white transition">
+                <Link href="https://github.com/Rishabh426/commit_lens" className="text-gray-400 hover:text-white transition">
                   GitHub Repository
                 </Link>
               </li>

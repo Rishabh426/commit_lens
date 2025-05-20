@@ -11,7 +11,7 @@ import dynamic from "next/dynamic"
 import { toast } from "sonner"
 import type { Language } from "@/types/code"
 import { analyzeCode } from "@/lib/syntax-analyze"
-import { executeCode, saveCode } from "@/lib/code-executor"
+import { executeCode, saveCode, savePreviousCode, getPreviousCode } from "@/lib/code-executor"
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -87,7 +87,15 @@ export default function CodeEditorPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [hasPreviousCode, setHasPreviousCode] = useState<boolean>(false)
 
+  // Check if there's previous code available
+  useEffect(() => {
+    const prevCode = getPreviousCode()
+    setHasPreviousCode(!!prevCode)
+  }, [])
+
+  // Load last code from localStorage if available
   useEffect(() => {
     const lastCode = localStorage.getItem("lastCode")
     const lastLanguage = localStorage.getItem("lastLanguage") as Language | null
@@ -95,6 +103,9 @@ export default function CodeEditorPage() {
 
     if (lastCode) {
       setCode(lastCode)
+    } else {
+      // Only set default code if there's no saved code
+      setCode(DEFAULT_CODE[language])
     }
 
     if (lastLanguage) {
@@ -104,21 +115,47 @@ export default function CodeEditorPage() {
     if (lastTitle) {
       setTitle(lastTitle)
     }
-  }, []) 
 
+    // Log for debugging
+    console.log("Loaded from localStorage:", { lastCode, lastLanguage, lastTitle })
+  }, []) // Empty dependency array ensures this only runs once on mount
+
+  // Save current code to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("lastCode", code)
-    localStorage.setItem("lastLanguage", language)
-    localStorage.setItem("lastTitle", title)
+    if (code) {
+      localStorage.setItem("lastCode", code)
+      localStorage.setItem("lastLanguage", language)
+      localStorage.setItem("lastTitle", title)
+      console.log("Saved to localStorage:", { code: code.substring(0, 20) + "...", language, title })
+    }
   }, [code, language, title])
 
   const handleLanguageChange = (value: string) => {
-    setLanguage(value as Language)
+    const newLanguage = value as Language
+
+    // Save current code as previous before changing language
+    savePreviousCode(code, language, title)
+
+    // Save current code before changing language
+    localStorage.setItem("lastCode", code)
+    localStorage.setItem("lastLanguage", language)
+
+    // Update language
+    setLanguage(newLanguage)
+
+    // Only set default code if the current code is empty or matches the default for the previous language
+    if (!code || code === DEFAULT_CODE[language]) {
+      setCode(DEFAULT_CODE[newLanguage])
+    }
   }
 
   const handleEditorChange = (value: string | undefined) => {
-    if (value !== undefined) {
+    if (value !== undefined && value !== code) {
+      // Save current code as previous before updating
+      savePreviousCode(code, language, title)
       setCode(value)
+      // Check if we have previous code now
+      setHasPreviousCode(true)
     }
   }
 
@@ -143,16 +180,35 @@ export default function CodeEditorPage() {
   const analyzeAndNavigate = async () => {
     setIsAnalyzing(true)
     try {
+      // Save current state to localStorage before navigating
       localStorage.setItem("lastCode", code)
       localStorage.setItem("lastLanguage", language)
       localStorage.setItem("lastTitle", title)
+      console.log("Saved before analysis:", { code: code.substring(0, 20) + "...", language, title })
 
       const analysisResult = await analyzeCode(code, language, title)
-      sessionStorage.setItem("codeAnalysisResult", JSON.stringify(analysisResult))
+
+      // Create a safe copy of the analysis result without circular references
+      const safeResult = {
+        ...analysisResult,
+        ast: {
+          type: analysisResult.ast.type || "AST",
+          simplified: true,
+          // Include only safe, non-circular properties
+          nodeCount:
+            typeof analysisResult.ast.statements === "object"
+              ? Array.isArray(analysisResult.ast.statements)
+                ? analysisResult.ast.statements.length
+                : 1
+              : 0,
+        },
+      }
+
+      sessionStorage.setItem("codeAnalysisResult", JSON.stringify(safeResult))
       router.push("/landing/report")
     } catch (error) {
       console.error("Error analyzing code:", error)
-      toast.error("Failed to analyze code")
+      toast.error("Failed to analyze code: " + (error instanceof Error ? error.message : "Unknown error"))
     } finally {
       setIsAnalyzing(false)
     }
@@ -161,9 +217,11 @@ export default function CodeEditorPage() {
   const executeAndNavigate = async () => {
     setIsExecuting(true)
     try {
+      // Save current state to localStorage before navigating
       localStorage.setItem("lastCode", code)
       localStorage.setItem("lastLanguage", language)
       localStorage.setItem("lastTitle", title)
+      console.log("Saved before execution:", { code: code.substring(0, 20) + "...", language, title })
 
       const outputResult = await executeCode(code, language)
       sessionStorage.setItem("codeOutput", JSON.stringify(outputResult))
@@ -176,9 +234,24 @@ export default function CodeEditorPage() {
     }
   }
 
+  const handleRestorePrevious = () => {
+    const prevCode = getPreviousCode()
+    if (prevCode) {
+      savePreviousCode(code, language, title)
+
+      setCode(prevCode.code)
+      setLanguage(prevCode.language)
+      setTitle(prevCode.title)
+
+      toast.success("Previous code restored")
+    } else {
+      toast.error("No previous code available")
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
-      <header className="h-16 border-b border-gray-700 flex items-center justify-between px-6">
+      <header className="h-16 border-b border-gray-700 flex items-center justify-between px-6 relative z-20">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 text-white hover:text-gray-300 transition-colors">
             <ArrowLeft className="h-5 w-5" />
@@ -197,18 +270,28 @@ export default function CodeEditorPage() {
             className="w-[200px] bg-gray-800 border-gray-700 text-white"
             placeholder="Snippet Title"
           />
-          <Select value={language} onValueChange={handleLanguageChange}>
-            <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
-              <SelectValue placeholder="Select Language" />
-            </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-700 text-white">
-              <SelectItem value="javascript">JavaScript</SelectItem>
-              <SelectItem value="typescript">TypeScript</SelectItem>
-              <SelectItem value="cpp">C++</SelectItem>
-              <SelectItem value="c">C</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="relative z-30">
+            <Select value={language} onValueChange={handleLanguageChange}>
+              <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+                <SelectValue placeholder="Select Language" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white z-50">
+                <SelectItem value="javascript">JavaScript</SelectItem>
+                <SelectItem value="typescript">TypeScript</SelectItem>
+                <SelectItem value="cpp">C++</SelectItem>
+                <SelectItem value="c">C</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex gap-2">
+            <Button
+              onClick={handleRestorePrevious}
+              disabled={!hasPreviousCode}
+              variant="outline"
+              className="bg-gray-800 hover:bg-gray-700 border-gray-700 text-white"
+            >
+              Restore Previous
+            </Button>
             <Button
               onClick={handleClear}
               variant="outline"
@@ -250,7 +333,7 @@ export default function CodeEditorPage() {
         </div>
       </div>
 
-      <footer className="h-16 border-t border-gray-700 flex items-center justify-end px-6 gap-4">
+      <footer className="h-16 border-t border-gray-700 flex items-center justify-end px-6 gap-4 relative z-20">
         <Button
           onClick={executeAndNavigate}
           disabled={isExecuting}
@@ -286,6 +369,7 @@ export default function CodeEditorPage() {
           )}
         </Button>
       </footer>
+      {/* <DebugStorage /> */}
     </div>
   )
 }
