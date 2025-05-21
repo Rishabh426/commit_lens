@@ -1,23 +1,6 @@
 # CommitLens
 
-<p align="center">
-  <img src="public/logo.png" alt="CommitLens Logo" width="200" />
-</p>
-
-<p align="center">
-  A powerful online compiler and code analyzer that supports JavaScript, TypeScript, C++, and C.
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#how-it-works">How It Works</a> •
-  <a href="#project-structure">Project Structure</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#technologies">Technologies</a> •
-  <a href="#contributing">Contributing</a> •
-  <a href="#license">License</a>
-</p>
+CommitLens is a powerful online compiler and code analyzer that supports multiple programming languages, including JavaScript, TypeScript, C++, and C. It offers real-time syntax analysis, detailed error reporting, and an intuitive interface to enhance the coding experience.
 
 ## Features
 
@@ -27,6 +10,7 @@
 - **Abstract Syntax Tree Visualization**: View the AST of your code
 - **Dark Mode Support**: Comfortable coding experience in any lighting condition
 - **Responsive Design**: Works on desktop and mobile devices
+
 
 ## How It Works
 
@@ -174,49 +158,3 @@ commitlens/
 ```bash
 git clone https://github.com/yourusername/commitlens.git
 cd commitlens
-
-## System Architecture
-
-The following diagram illustrates the system architecture and data flow of CommitLens:
-
-```mermaid
-graph TD
-    User["User"]-->|Visits|LP["Landing Page<br/>/page.tsx"]
-    User-->|Clicks 'Try it now'|CE["Code Editor<br/>/landing/codeeditor/page.tsx"]
-    
-    subgraph "Client Side"
-        LP-->|Navigation|CE
-        CE-->|Uses|ME["Monaco Editor<br/>@monaco-editor/react"]
-        CE-->|Calls|SA["Syntax Analyzer<br/>lib/syntax-analyzer.ts"]
-        CE-->|Stores results|SS["Session Storage"]
-        CE-->|Redirects to|AR["Analysis Report<br/>/landing/analysis-report/page.tsx"]
-        AR-->|Retrieves from|SS
-    end
-    
-    subgraph "Syntax Analysis"
-        SA-->|JavaScript|JS["JavaScript Analyzer<br/>- Esprima<br/>- Acorn<br/>- Custom Logic"]
-        SA-->|TypeScript|TS["TypeScript Analyzer<br/>- TypeScript Compiler API<br/>- Custom Logic"]
-        SA-->|C++|CPP["C++ Analyzer<br/>- Custom Logic<br/>- Syntax Rules"]
-        SA-->|C|C["C Analyzer<br/>- Custom Logic<br/>- Syntax Rules"]
-    end
-    
-    subgraph "Analysis Results"
-        JS-->|Returns|AR1["Analysis Result<br/>{syntaxErrors, ast, isValid}"]
-        TS-->|Returns|AR1
-        CPP-->|Returns|AR1
-        C-->|Returns|AR1
-    end
-    
-    AR1-->|Stored in|SS
-    SS-->|Retrieved by|AR
-    
-    AR-->|Displays|ERR["Error Report<br/>- Line numbers<br/>- Error messages<br/>- Severity"]
-    AR-->|Displays|AST["AST Visualization<br/>- Tree structure<br/>- Node types"]
-    AR-->|Displays|SRC["Source Code<br/>- Highlighted errors<br/>- Line numbers"]
-    
-    subgraph "UI Components"
-        TT["Theme Toggle<br/>components/theme-toggle.tsx"]-->|Changes|TH["Theme<br/>(Light/Dark)"]
-        TH-->|Affects|LP
-        TH-->|Affects|CE
-        TH-->|Affects|AR
-    end
