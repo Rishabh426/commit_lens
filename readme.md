@@ -158,3 +158,51 @@ commitlens/
 ```bash
 git clone https://github.com/yourusername/commitlens.git
 cd commitlens
+
+function twoSum(nums, target) {
+    const numToIndex = new Map();
+
+    for (let i = 0; i < nums.length; i++) {
+        const complement = target - nums[i];
+
+        if (numToIndex.has(complement)) {
+            return [numToIndex.get(complement), i];
+        }
+
+        numToIndex.set(nums[i], i);
+    }
+
+    throw new Error("No two sum solution");
+}
+
+
+const nums = [2, 7, 11, 15];
+const target = 9;
+
+console.log(twoSum(nums, target));
+
+
+
+
+
+
+function twoSum(nums: number[], target: number): number[] {
+    const numToIndex = new Map<number, number>();
+
+    for (let i = 0; i < nums.length; i++) {
+        const complement = target - nums[i];
+
+        if (numToIndex.has(complement)) {
+            return [numToIndex.get(complement)!, i];
+        }
+
+        numToIndex.set(nums[i], i);
+    }
+
+    throw new Error("No two sum solution");
+}
+
+const nums = [2, 7, 11, 15];
+const target = 9;
+
+console.log(twoSum(nums, target)); 

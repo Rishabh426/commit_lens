@@ -89,13 +89,11 @@ export default function CodeEditorPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [hasPreviousCode, setHasPreviousCode] = useState<boolean>(false)
 
-  // Check if there's previous code available
   useEffect(() => {
     const prevCode = getPreviousCode()
     setHasPreviousCode(!!prevCode)
   }, [])
 
-  // Load last code from localStorage if available
   useEffect(() => {
     const lastCode = localStorage.getItem("lastCode")
     const lastLanguage = localStorage.getItem("lastLanguage") as Language | null
@@ -104,7 +102,6 @@ export default function CodeEditorPage() {
     if (lastCode) {
       setCode(lastCode)
     } else {
-      // Only set default code if there's no saved code
       setCode(DEFAULT_CODE[language])
     }
 
@@ -116,11 +113,9 @@ export default function CodeEditorPage() {
       setTitle(lastTitle)
     }
 
-    // Log for debugging
     console.log("Loaded from localStorage:", { lastCode, lastLanguage, lastTitle })
-  }, []) // Empty dependency array ensures this only runs once on mount
+  }, []) 
 
-  // Save current code to localStorage whenever it changes
   useEffect(() => {
     if (code) {
       localStorage.setItem("lastCode", code)
@@ -133,17 +128,13 @@ export default function CodeEditorPage() {
   const handleLanguageChange = (value: string) => {
     const newLanguage = value as Language
 
-    // Save current code as previous before changing language
     savePreviousCode(code, language, title)
 
-    // Save current code before changing language
     localStorage.setItem("lastCode", code)
     localStorage.setItem("lastLanguage", language)
 
-    // Update language
     setLanguage(newLanguage)
 
-    // Only set default code if the current code is empty or matches the default for the previous language
     if (!code || code === DEFAULT_CODE[language]) {
       setCode(DEFAULT_CODE[newLanguage])
     }
@@ -151,10 +142,8 @@ export default function CodeEditorPage() {
 
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined && value !== code) {
-      // Save current code as previous before updating
       savePreviousCode(code, language, title)
       setCode(value)
-      // Check if we have previous code now
       setHasPreviousCode(true)
     }
   }
@@ -180,7 +169,6 @@ export default function CodeEditorPage() {
   const analyzeAndNavigate = async () => {
     setIsAnalyzing(true)
     try {
-      // Save current state to localStorage before navigating
       localStorage.setItem("lastCode", code)
       localStorage.setItem("lastLanguage", language)
       localStorage.setItem("lastTitle", title)
@@ -188,13 +176,11 @@ export default function CodeEditorPage() {
 
       const analysisResult = await analyzeCode(code, language, title)
 
-      // Create a safe copy of the analysis result without circular references
       const safeResult = {
         ...analysisResult,
         ast: {
           type: analysisResult.ast.type || "AST",
           simplified: true,
-          // Include only safe, non-circular properties
           nodeCount:
             typeof analysisResult.ast.statements === "object"
               ? Array.isArray(analysisResult.ast.statements)
@@ -217,7 +203,6 @@ export default function CodeEditorPage() {
   const executeAndNavigate = async () => {
     setIsExecuting(true)
     try {
-      // Save current state to localStorage before navigating
       localStorage.setItem("lastCode", code)
       localStorage.setItem("lastLanguage", language)
       localStorage.setItem("lastTitle", title)
@@ -369,7 +354,6 @@ export default function CodeEditorPage() {
           )}
         </Button>
       </footer>
-      {/* <DebugStorage /> */}
     </div>
   )
 }
